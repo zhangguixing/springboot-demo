@@ -1,0 +1,58 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/rabbit
+    http://www.springframework.org/schema/rabbit/spring-rabbit-1.2.xsd
+     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd" >
+
+    <description>rabbitmq 连接服务配置</description>
+
+    <!-- 连接配置 -->
+    <rabbit:connection-factory id="ctsConnectionFactory" addresses="10.167.5.21:5672" username="cdfg_app" password="YX$uAX#td$oni4YpJe" virtual-host="/cts-vhost"/>
+
+    <rabbit:admin connection-factory="ctsConnectionFactory" id="ctsConnectionAdmin"/>
+
+    <!-- spring template声明-->
+    <rabbit:template exchange="cts-test-exchange" id="ctsAmqpTemplate" connection-factory="ctsConnectionFactory" message-converter="jsonMessageConverter"/>
+    <!-- 消息对象json转换类 -->
+    <bean id="jsonMessageConverter" class="org.springframework.amqp.support.converter.Jackson2JsonMessageConverter" />
+
+    <!-- 声明一个Que -->
+    <rabbit:queue id="cts_test_queue" name="cts_test_queue" durable="true" auto-delete="false" exclusive="false" declared-by="ctsConnectionAdmin" />
+    <!--
+    durable:是否持久化
+    exclusive: 仅创建者可以使用的私有队列，断开后自动删除
+    auto_delete: 当所有消费客户端连接断开后，是否自动删除队列
+     -->
+
+    <!-- 声明一个Exchange -->
+    <rabbit:direct-exchange name="cts-test-exchange" durable="true" auto-delete="false" id="cts-test-exchange" declared-by="ctsConnectionAdmin">
+        <rabbit:bindings>
+            <rabbit:binding queue="cts_test_queue" key="cts_test_queue"/>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+    <!--
+    rabbit:direct-exchange：定义exchange模式为direct，意思就是消息与一个特定的路由键完全匹配，才会转发。
+    rabbit:binding：设置消息queue匹配的key
+    -->
+    <!-- 连接配置 CDF内部MQ -->
+    <rabbit:connection-factory id="connectionFactory" addresses="10.167.5.21:5672" username="cdfg_app" password="YX$uAX#td$oni4YpJe" virtual-host="/cdf-vhost"/>
+
+    <rabbit:admin connection-factory="connectionFactory" id="connectionAdmin"/>
+
+    <!-- spring template声明-->
+    <rabbit:template exchange="tcp-test-exchange" id="tcpAmqpTemplate" connection-factory="connectionFactory" message-converter="jsonMessageConverter"/>
+
+    <!-- 声明一个Exchange -->
+    <rabbit:direct-exchange name="tcp-test-exchange" durable="true" auto-delete="false" id="tcp-test-exchange" declared-by="connectionAdmin">
+        <rabbit:bindings>
+            <rabbit:binding queue="tcp_test_queue" key="tcp_test_queue"/>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+    <!-- 死信队列 -->
+    <rabbit:queue id="tcp_test_queue" name="tcp_test_queue" durable="true" auto-delete="false" exclusive="false" declared-by="connectionAdmin"/>
+
+</beans>

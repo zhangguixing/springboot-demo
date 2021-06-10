@@ -3,3 +3,4 @@
 
 - springboot整合cxf `springboot-cxf-demo`
 - spring整合redis `spring-redis`
+- spring整合rabbitmq `spring-rabbitmq`
