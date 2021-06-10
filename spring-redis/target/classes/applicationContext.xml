@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:redisson="http://redisson.org/schema/redisson"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.3.xsd
+        http://redisson.org/schema/redisson
+        http://redisson.org/schema/redisson/redisson.xsd">
+
+    <!-- 1、连接池定义-->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="2048" />
+        <property name="maxIdle" value="200" />
+        <property name="numTestsPerEvictionRun" value="1024" />
+
+        <property name="minEvictableIdleTimeMillis" value="-1" />
+        <property name="softMinEvictableIdleTimeMillis" value="10000" />
+        <property name="maxWaitMillis" value="1500" />
+        <property name="testOnReturn" value="false" />
+        <property name="jmxEnabled" value="true" />
+        <property name="blockWhenExhausted" value="false" />
+        <!-- 三个配置配合设置，可以起到以下三点作用： (1)、保证每次获取的连接都是可用的 (2)、定时清理失效连接，补充新连接，提高效率 -->
+        <property name="testOnBorrow" value="true" />
+        <property name="testWhileIdle" value="true" />
+        <property name="timeBetweenEvictionRunsMillis" value="30000" />
+    </bean>
+
+    <!-- 2、集群配置。采用redis-cluster的redis -->
+    <bean id="redisClusterConfiguration" class="org.springframework.data.redis.connection.RedisClusterConfiguration">
+        <property name="maxRedirects" value="3" />
+        <property name="clusterNodes">
+            <set>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg name="host" value="10.167.5.31" />
+                    <constructor-arg name="port" value="6379" />
+                </bean>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg name="host" value="10.167.5.32" />
+                    <constructor-arg name="port" value="6379" />
+                </bean>
+                <bean class="org.springframework.data.redis.connection.RedisNode ">
+                    <constructor-arg name="host" value="10.167.5.33" />
+                    <constructor-arg name="port" value="6379" />
+                </bean>
+            </set>
+        </property>
+    </bean>
+    <bean id="clusterJedisConnectionFactory"
+          class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory" >
+        <constructor-arg name="clusterConfig" ref="redisClusterConfiguration" />
+        <constructor-arg name="poolConfig" ref="jedisPoolConfig" />
+        <property name="password" value="comall"/>
+    </bean>
+
+    <!-- 3、配置RedisTemplate模板   把第二步配置好的连接工厂JedisConnectionFactory通过属性注入到RedisTemplate模板中-->
+    <bean id="basicRedisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="clusterJedisConnectionFactory" />
+        <property name="keySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+        </property>
+        <property name="valueSerializer" ref="fastJsonRedisSerializer"/>
+        <property name="hashKeySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="hashValueSerializer" ref="fastJsonRedisSerializer"/>
+    </bean>
+
+<!--    <bean id="fastJsonRedisSerializer" class="org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer" >-->
+<!--        <constructor-arg value="java.lang.Object"/>-->
+<!--        <property name="objectMapper">-->
+<!--            <bean class="com.gxzhang.test.MyObjectMapper"/>-->
+<!--        </property>-->
+<!--    </bean>-->
+<!--
+    <bean id="fastJsonRedisSerializer" class="com.alibaba.fastjson.support.spring.FastJsonRedisSerializer" >
+        <constructor-arg value="java.lang.Object"/>
+    </bean>-->
+    <bean id="fastJsonRedisSerializer" class="com.alibaba.fastjson.support.spring.GenericFastJsonRedisSerializer" />
+
+
+<!--    <bean id="fastJsonRedisSerializer" class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer" />-->
+
+    <redisson:client id="redissonClient">
+        <redisson:cluster-servers password="comall">
+            <redisson:node-address value="redis://10.167.5.31:6379"/>
+            <redisson:node-address value="redis://10.167.5.32:6379"/>
+            <redisson:node-address value="redis://10.167.5.33:6379"/>
+        </redisson:cluster-servers>
+    </redisson:client>
+
+</beans>
