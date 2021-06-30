@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.2.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+    <context:property-placeholder location="cache.properties"/>
+
+    <!-- 1、连接池定义-->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="2048" />
+        <property name="maxIdle" value="200" />
+        <property name="numTestsPerEvictionRun" value="1024" />
+
+        <property name="minEvictableIdleTimeMillis" value="-1" />
+        <property name="softMinEvictableIdleTimeMillis" value="10000" />
+        <property name="maxWaitMillis" value="1500" />
+        <property name="testOnReturn" value="false" />
+        <property name="jmxEnabled" value="true" />
+        <property name="blockWhenExhausted" value="false" />
+        <!-- 三个配置配合设置，可以起到以下三点作用： (1)、保证每次获取的连接都是可用的 (2)、定时清理失效连接，补充新连接，提高效率 -->
+        <property name="testOnBorrow" value="true" />
+        <property name="testWhileIdle" value="true" />
+        <property name="timeBetweenEvictionRunsMillis" value="30000" />
+    </bean>
+
+    <!-- 2、集群配置。采用redis-cluster的redis -->
+    <bean id="redisClusterConfiguration" class="org.springframework.data.redis.connection.RedisClusterConfiguration">
+        <property name="maxRedirects" value="3" />
+        <property name="clusterNodes">
+            <set>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg name="host" value="${redis.host1.ip}" />
+                    <constructor-arg name="port" value="${redis.host1.port}" />
+                </bean>
+                <bean class="org.springframework.data.redis.connection.RedisNode">
+                    <constructor-arg name="host" value="${redis.host2.ip}" />
+                    <constructor-arg name="port" value="${redis.host2.port}" />
+                </bean>
+                <bean class="org.springframework.data.redis.connection.RedisNode ">
+                    <constructor-arg name="host" value="${redis.host3.ip}" />
+                    <constructor-arg name="port" value="${redis.host3.port}" />
+                </bean>
+            </set>
+        </property>
+    </bean>
+    <bean id="clusterJedisConnectionFactory"
+          class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory" >
+        <constructor-arg name="clusterConfig" ref="redisClusterConfiguration" />
+        <constructor-arg name="poolConfig" ref="jedisPoolConfig" />
+        <property name="password" value="${redis.password}"/>
+    </bean>
+
+    <!-- 3、配置RedisTemplate模板   把第二步配置好的连接工厂JedisConnectionFactory通过属性注入到RedisTemplate模板中-->
+    <bean id="basicRedisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="clusterJedisConnectionFactory" />
+        <property name="keySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+        </property>
+        <property name="valueSerializer" ref="fastJsonRedisSerializer"/>
+        <property name="hashKeySerializer">
+            <bean class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+        </property>
+        <property name="hashValueSerializer" ref="fastJsonRedisSerializer"/>
+    </bean>
+
+    <bean id="fastJsonRedisSerializer" class="com.alibaba.fastjson.support.spring.GenericFastJsonRedisSerializer" />
+
+    <!--memcache-->
+    <bean id="configuration"
+          class="com.google.code.yanf4j.config.Configuration">
+        <property name="sessionReadBufferSize" value="131072"/>
+        <property name="readThreadCount" value="0"/>
+        <property name="sessionIdleTimeout" value="500000"/>
+        <property name="writeThreadCount" value="0"/>
+        <!--Socket SO_TIMEOUT 单位：毫秒  -->
+        <property name="soTimeout" value="600000"/>
+    </bean>
+    <bean name="basicMemcachedClientBuilder" class="net.rubyeye.xmemcached.XMemcachedClientBuilder">
+        <!-- 缓存服务器地址和端口 -->
+        <constructor-arg>
+            <list>
+                <bean class="java.net.InetSocketAddress">
+                    <constructor-arg>
+                        <value>${memcached.host1.ip}</value>
+                    </constructor-arg>
+                    <constructor-arg>
+                        <value>${memcached.host1.port}</value>
+                    </constructor-arg>
+                </bean>
+                <bean class="java.net.InetSocketAddress">
+                    <constructor-arg>
+                        <value>${memcached.host2.ip}</value>
+                    </constructor-arg>
+                    <constructor-arg>
+                        <value>${memcached.host2.port}</value>
+                    </constructor-arg>
+                </bean>
+                <bean class="java.net.InetSocketAddress">
+                    <constructor-arg>
+                        <value>${memcached.host3.ip}</value>
+                    </constructor-arg>
+                    <constructor-arg>
+                        <value>${memcached.host3.port}</value>
+                    </constructor-arg>
+                </bean>
+            </list>
+        </constructor-arg>
+        <!-- 对应的节点的权重 -->
+        <constructor-arg>
+            <list>
+                <value>1</value>
+                <value>1</value>
+                <value>1</value>
+            </list>
+        </constructor-arg>
+        <!-- 授权验证信息 -->
+        <!-- 连接数 -->
+        <property name="connectionPoolSize" value="50"></property>
+        <!-- 协议工厂，net.rubyeye.xmemcached.command.BinaryCommandFactory,TextCommandFactory(默认),KestrelCommandFactory -->
+        <property name="commandFactory">
+            <bean class="net.rubyeye.xmemcached.command.TextCommandFactory"></bean>
+        </property>
+        <!-- 分布策略，一致性哈希net.rubyeye.xmemcached.impl.KetamaMemcachedSessionLocator或者ArraySessionLocator(默认) -->
+        <property name="sessionLocator">
+            <bean class="net.rubyeye.xmemcached.impl.KetamaMemcachedSessionLocator"></bean>
+        </property>
+        <!-- 序列化转换器，默认使用net.rubyeye.xmemcached.transcoders.SerializingTranscoder，更多选项参见javadoc -->
+        <property name="transcoder">
+            <bean class="net.rubyeye.xmemcached.transcoders.SerializingTranscoder" />
+        </property>
+        <!-- IoBuffer分配器，默认为net.rubyeye.xmemcached.buffer.SimpleBufferAllocator，可选CachedBufferAllocator(不推荐) -->
+        <property name="bufferAllocator">
+            <bean class="net.rubyeye.xmemcached.buffer.SimpleBufferAllocator"></bean>
+        </property>
+        <!-- 是否启用failure模式，true为启用，默认不启用 -->
+        <property name="failureMode" value="false"/>
+        <property name="configuration">
+            <ref bean="configuration" />
+        </property>
+    </bean>
+    <!-- Use factory bean to build memcached client -->
+    <bean name="basicMemcachedClient" factory-bean="basicMemcachedClientBuilder"
+          factory-method="build" destroy-method="shutdown" />
+</beans>
