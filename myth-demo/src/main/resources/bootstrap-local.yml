@@ -1,0 +1,153 @@
+spring:
+  cloud:
+    bootstrap:
+      enabled: true
+    nacos:
+      server-addr: 127.0.0.1:17848
+      username: nacos
+      password: nacos
+      discovery:
+        namespace: aeee8abe-56af-4697-a047-0a873a2a38a4
+        group: ${NACOS_DISCOVERY_GROUP:demo-local}
+        enabled: false
+      config:
+        namespace: aeee8abe-56af-4697-a047-0a873a2a38a4
+        group: demo
+        file-extension: yaml
+        enabled: false
+        extension-configs:
+          - dataId: rabbitmq-config.yaml
+            group: common
+            refresh: true
+          - dataId: redisson-config.yaml
+            group: common
+            refresh: true
+          - dataId: xxl-job-config.yaml
+            group: common
+            refresh: true
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/test?allowMultiQueries=true&useSSL=false&useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+    username: root
+    password: '123456'
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 25000
+      auto-commit: true
+      connection-test-query: select 1
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+      enabled: true
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: admin
+    password: 123456
+    publisher-confirm-type: correlated
+    virtual-host: local
+    listener:
+      simple:
+        prefetch: 1   # prefetchCount设置每次取多少条消息
+        acknowledge-mode: auto
+        retry:
+          enabled: true               # 是否启用消息重试机制
+          max-attempts: 3             # 最大重试次数
+          initial-interval: 1000      # 初始重试时间间隔（毫秒）
+          multiplier: 2             # 重试时间间隔的乘数
+          max-interval: 30000         # 最大重试时间间隔（毫秒）
+  redis:
+    redisson:
+      config: |
+        # 单节点设置
+        singleServerConfig:
+          address: 127.0.0.1:6379
+          database: 0
+          password: root
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+          retryAttempts: 3
+          retryInterval: 1500
+          clientName: null
+          # 发布和订阅连接的最小空闲连接数 默认1
+          subscriptionConnectionMinimumIdleSize: 1
+          # 发布和订阅连接池大小 默认50
+          subscriptionConnectionPoolSize: 1
+          # 单个连接最大订阅数量 默认5
+          subscriptionsPerConnection: 1
+          # 最小空闲连接数 默认32，现在暂时不需要那么多的线程
+          connectionMinimumIdleSize: 4
+          # connectionPoolSize 默认64，现在暂时不需要那么多的线程
+          connectionPoolSize: 4
+        # 这个线程池数量被所有RTopic对象监听器，RRemoteService调用者和RExecutorService任务共同共享。
+        threads: 0
+        # 这个线程池数量是在一个Redisson实例内，被其创建的所有分布式数据类型和服务，以及底层客户端所一同共享的线程池里保存的线程数量。
+        nettyThreads: 0
+        transportMode: NIO
+  job:
+    admin:
+      addresses: http://127.0.0.1
+    accessToken: job.token.com
+    executor:
+      appname: ${spring.profiles.active}-${spring.application.name}
+      logpath: /data/applogs/xxl-job/jobhandler
+      logretentiondays: 30
+
+# mybaits-plus配置
+mybatis-plus:
+  # MyBatis Mapper所对应的XML文件位置
+  mapper-locations: classpath*:/mapper/**/*Mapper.xml
+  configuration:
+    # 下划线转驼峰映射
+    map-underscore-to-camel-case: true
+  global-config:
+    # 关闭MP3.0自带的banner
+    banner: false
+    db-config:
+      # 主键类型 0:数据库ID自增 1.未定义 2.用户输入 3 id_worker 4.uuid 5.id_worker字符串表示
+      id-type: AUTO
+      #字段策略 0:"忽略判断",1:"非 NULL 判断"),2:"非空判断"
+      insert-strategy: NOT_NULL
+      update-strategy: NOT_NULL
+      select-strategy: NOT_NULL
+      # 默认数据库表下划线命名
+      table-underline: true
+# PageHelper配置
+pagehelper:
+  helper-dialect: mysql
+
+# Feign
+feign:
+  httpclient:
+    enabled: true
+  compression:
+    response:
+      enabled: true
+  okhttp:
+    enabled: true
+  #配置超时时间
+  client:
+    config:
+      default:
+        connectTimeout: 10000
+        readTimeout: 10000
+
+management:
+  server:
+    add-application-context-header: false
+
+servlet:
+  http-wrapper:
+    enabled: true
+
+log:
+  interceptor:
+    enabled: true
+    response-print: true

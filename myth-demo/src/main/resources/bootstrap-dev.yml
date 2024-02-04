@@ -1,0 +1,25 @@
+spring:
+  cloud:
+    bootstrap:
+      enabled: true
+    nacos:
+      server-addr: 127.0.0.1:17848
+      username: nacos
+      password: nacos
+      discovery:
+        namespace: aeee8abe-56af-4697-a047-0a873a2a38a4
+        group: ${NACOS_DISCOVERY_GROUP:demo-local}
+      config:
+        namespace: aeee8abe-56af-4697-a047-0a873a2a38a4
+        group: demo
+        file-extension: yaml
+        extension-configs:
+          - dataId: rabbitmq-config.yaml
+            group: common
+            refresh: true
+          - dataId: redisson-config.yaml
+            group: common
+            refresh: true
+          - dataId: xxl-job-config.yaml
+            group: common
+            refresh: true

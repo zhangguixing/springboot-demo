@@ -1,0 +1,18 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: myth-demo
+  profiles:
+    active: local
+  cloud:
+    bootstrap:
+      enabled: true
+
+mybatis-plus:
+  global-config:
+    banner: false
+
+logging:
+  file.name: ./.logs/${spring.application.name}/${spring.application.name}.log
